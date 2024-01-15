@@ -35,12 +35,19 @@ const registerSchema = new mongoose.Schema({
   type: String,
   require: true,
   },
+
+ 
   works: [
     {
       date: { type: String, required: true },
       work: { type: String, required: true },
+      link: { type: String },
+      unison: { type: String },
+  
     },
   ],
+
+ 
   });
 
   const Vx = mongoose.model("vxc", registerSchema);
@@ -149,18 +156,20 @@ app.get('/user/:username', async (req, res) => {
   const { username } = req.params;
 
 
-    const user = await Vx.findOne({ name: username });
+    const user = await Vx.findOne({ name: username});
 
-   
+    // const filteredWorks = user.works.filter(task => task.unison !== 'veer');
 
-const userData = {
-  name: user.name,
-  email: user.email,
-works: user.works || [],
+    const userData = {
+      name: user.name,
+      email: user.email,
+      works: user.works || [],
+      // Avoid sending sensitive information like passwords to the client
+    };
 
   
   // Avoid sending sensitive information like passwords to the client
-};
+
 
 res.json({ success: true, data: userData });
 
@@ -179,6 +188,12 @@ app.post('/admin', async (req, res) => {
         // If user does not exist, return an error response
         return res.json({ success: false, error: 'User not found' });
       }
+      const workexist = user.works.find(task => task.work === work);
+  
+      if (workexist) {
+        // If there is no match, return an error response
+        return res.json({ success: false, error: 'work already assigned' });
+      }
   
       // Add the work and date to the user's works array
       
@@ -192,6 +207,89 @@ app.post('/admin', async (req, res) => {
       res.json({ success: false, error: 'Technical issue' });
     }
   });
+
+  app.post('/submitLink', async (req, res) => {
+    const { name, date, work, link } = req.body;
+  
+    try {
+      // Find the user by name
+      const user = await Vx.findOne({ name });
+  
+      // Find the index of the task in the user's works array that matches both date and work
+      const taskIndex = user.works.findIndex(task => task.date === date && task.work === work);
+  
+      if (taskIndex === -1) {
+        // If there is no match, return an error response
+        return res.json({ success: false, error: 'User not found or date and work do not match' });
+      }
+  
+      // Update the link for the matched task
+      user.works[taskIndex].link = link;
+      await user.save();
+  
+      res.json({ success: true, message: 'Link sent successfully' });
+    } catch (error) {
+      console.error('Error updating link:', error);
+      res.json({ success: false, error: 'Technical issue' });
+    }
+  });
+  
+
+  app.get("/accept", async (req, res) => {
+    try {
+      // Find documents where at least one 'works' item has a 'link'
+      const allAttendanceData = await Vx.find({
+        "works.link": { $exists: true },
+        
+      });
+  
+      res.status(200).json(allAttendanceData);
+    } catch (error) {
+      console.error("Error fetching attendance data:", error);
+      res.status(500).json({ error: "Internal Server Error" });
+    }
+  });
+
+
+  app.post('/delete', async (req, res) => {
+    const { name, work } = req.body;
+  
+    try {
+      // Find the user by name
+      const user = await Vx.findOne({ name });
+  
+      // Find the index of the task in the user's works array that matches both date and work
+      const taskIndex = user.works.findIndex(task => task.work === work);
+  
+      if (taskIndex === -1) {
+        // If there is no match, return an error response
+        return res.json({ success: false, error: 'can nott delete' });
+      }
+  
+      // Update the link for the matched task
+      user.works[taskIndex].unison = "veer";
+      await user.save();
+  
+      res.json({ success: true, message: 'work accepted' });
+    } catch (error) {
+      console.error('Error updating link:', error);
+      res.json({ success: false, error: 'Technical issue' });
+    }
+  });
+
+  
+  
+  
+
+ 
+
+
+ 
+
+
+
+
+
   
 
 
