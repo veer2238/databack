@@ -50,6 +50,19 @@ const registerSchema = new mongoose.Schema({
  
   });
 
+  const view = new mongoose.Schema({
+    id: {
+      type: Number,
+      required: true,
+    },
+    quantity: {
+      type: Number,
+      default: 0,
+    },
+  })
+
+  const Viewx = mongoose.model("count", view);
+
   const Vx = mongoose.model("vxc", registerSchema);
 
 //get register data
@@ -276,6 +289,58 @@ app.post('/admin', async (req, res) => {
       res.json({ success: false, error: 'Technical issue' });
     }
   });
+
+  app.post('/views', async (req, res) => {
+    const { id } = req.body;
+
+    try {
+        // Find the entry with the given ID in the database
+        let view = await Viewx.findOne({ id:  id  });
+
+        if (view) {
+            // If the entry exists, increment its quantity by one
+            view.quantity += 1;
+            await view.save();
+        } else {
+            // If the entry does not exist, create a new entry with quantity 1
+            view = await Viewx.create({ id, quantity: 1 });
+        }
+
+        // Log the ID and quantity
+        console.log(`ID: ${id}, Quantity: ${view.quantity}`);
+
+        // Respond with success
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error saving view data:', error);
+        res.json({ success: false, error: 'Technical issue' });
+    }
+});
+
+
+
+
+
+app.get('/views-count', async (req, res) => {
+  try {
+      // Retrieve all entries from the Viewx model
+      const views = await Viewx.find({}, 'id quantity');
+
+      // Send the list of all IDs and quantities as a JSON response
+      res.json({
+          success: true,
+          data: views
+      });
+  } catch (error) {
+      console.error('Error fetching views count:', error);
+      res.status(500).json({ success: false, error: 'Internal Server Error' });
+  }
+});
+
+
+
+
+
 
   
   
